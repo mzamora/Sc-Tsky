@@ -35,4 +35,5 @@ For reading the following programs can be used:
 
 ___
 
+This project was also the final project for SIOC208, class by Joel Norris at SIO, UCSD.
 Mónica Zamora Z., 2017. SRAF at UCSD solar.ucsd.edu

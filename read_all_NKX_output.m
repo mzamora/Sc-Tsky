@@ -19,7 +19,17 @@ for yy=2014:2017
             
             try
             %% Get sounding data & inversion
-            [p z tp td RH w winddir windspeed theta theta_e theta_v zi ni zit nit]=get_sounding_and_inversion(date_i,scutilsdir);
+            pathName=['../Sc-utils/Soundings/raw/72293_',datestr(date_i,'yyyy_mm_'),'0100_',num2str(dmax),'12.csv']; %set source of data
+            ListofVar={'PRES';'HGHT';'TEMP';'DWPT';'RELH';'MIXR';'WDIR';'WSPD';'THTA';'THTE';'THTV'};
+            [p z tp td RH w winddir windspeed theta theta_e theta_v]=Get_sounding_Var(date_i,date_i+0.5,pathName,ListofVar);
+            p=double(p); z=double(z);
+            f=w>50; p(f)=[]; z(f)=[]; tp(f)=[]; RH(f)=[]; w(f)=[];
+            [~,~,zit,zi,nit,ni]=TMP_Inversion_Strength_Cal(tp,z/1000,z(1)); %Xiaohui's code for inversion height
+            [~,~,zit2,~,nit2,~]=TMP_Inversion_Strength_Cal(-w,z/1000,z(1)); %Xiaohui's code for inversion height
+            if zit2<zit
+                zit=zit2;
+                nit=nit2;
+            end
 
             %% Compute upper values of moisture
             n_3km=find(z<3000,1,'last');
@@ -40,7 +50,11 @@ for yy=2014:2017
             filename=['NKX2/sounding_' datestr(date_i,'yyyymmdd') '.out'];
             try
                 [z2,p2,T2,wv2,O32,RH2,Aer2,LW_dn2,LW_up2]=read_streamer_output(filename);
-                LWi_upperz(ind)=interp1(z2,LW_dn2,zi,'linear','extrap');
+                if exist('zi')
+                    LWi_upperz(ind)=interp1(z2,LW_dn2,zi,'linear','extrap');
+                else
+                    LWi_upperz(ind)=LW_dn2(end);
+                end
             catch
             end
 

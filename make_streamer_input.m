@@ -10,16 +10,21 @@ dmax=eomday(year(date_i),month(date_i)); %last day of month
 pathName=['../Sc-utils/Soundings/raw/72293_',datestr(date_i,'yyyy_mm_'),'0100_',num2str(dmax),'12.csv']; %set source of data
 ListofVar={'PRES';'HGHT';'TEMP';'DWPT';'RELH';'MIXR';'WDIR';'WSPD';'THTA';'THTE';'THTV'};
 [p z tp td RH w winddir windspeed theta theta_e theta_v]=Get_sounding_Var(date_i,date_i+0.5,pathName,ListofVar);
+p=double(p); z=double(z);
+f=w>50; p(f)=[]; z(f)=[]; tp(f)=[]; RH(f)=[]; w(f)=[];
 [~,~,hght_top,zi,eta_top,ni]=TMP_Inversion_Strength_Cal(tp,z/1000,z(1)); %Xiaohui's code for inversion height
 [~,~,hght_top2,~,eta_top2,~]=TMP_Inversion_Strength_Cal(-w,z/1000,z(1)); %Xiaohui's code for inversion height
 
+if isempty(z)
+    return 
+end
 if isnan(zi)
     fprintf('No inversion found \n')
     return
 end
 if zi==z(1)/1e3
     fprintf('Surface inversion \n')
-    return
+    %return
 end
 if hght_top2<hght_top
     hght_top=hght_top2;
@@ -41,7 +46,7 @@ try
     end    
 catch
     fprintf('No cloud layer \n')
-    return
+    %return
 end
 
 h=zi*1e3-zb; %cloud thickness in m
