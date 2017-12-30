@@ -9,16 +9,16 @@ For creating the inputs and interacting with the outputs, you'll need to get the
 ## Input creation
 The following programs are used to create input files for the RTM software Streamer:
 
-* make_streamer_input_DYCOMS.m creates a profile based on the DYCOMS II RF-01 case. We use it for validating and selecting the options we want to use.
+* `make_streamer_input_DYCOMS.m` creates a profile based on the DYCOMS II RF-01 case. We use it for validating and selecting the options we want to use.
 
-* create_all_NKX_inputs.m (uses make_streamer_input.m) Creates inputs taking into account the whole sounding profile and then estimates cloud properties by assuming a well mixed structure
+* `create_all_NKX_inputs.m` (uses make_streamer_input.m) Creates inputs taking into account the whole sounding profile and then estimates cloud properties by assuming a well mixed structure
 
-* create_all_NKX_inputs_v2.m (uses make_streamer_input_v2.m) Creates inputs taking only the sounding profile above the cloud top (inversion height).
+* `create_all_NKX_inputs_v2.m` (uses make_streamer_input_v2.m) Creates inputs taking only the sounding profile above the cloud top (inversion height).
 
 ## Streamer files
-For running the files in Streamer, I opted for moving them to the testio folder in streamer and running them there. I did it only because F77 can give you trouble if path names are too long.
+For running the files in Streamer, I opted for moving them to the `testio` folder in streamer and running them there. I did it only because F77 can give you trouble if path names are too long.
 
-You also need to put the files_for_streamer/write_usr.f file in the progs folder of Streamer before building the code. Otherwise the post processing functions won't read the output correctly.
+You also need to put the `files_for_streamer/write_usr.f` file in the `progs` folder of Streamer before building the code. Otherwise the post processing functions won't read the output correctly.
 
 So I move them and then I run the batch of all files recursively with something like 
 
@@ -29,11 +29,12 @@ And then copy them back here (I guess I could have done all that in a script huh
 ## Output reading
 For reading the following programs can be used:
 
-* process_DYCOMS.m reads DYCOMS different setup outputs and creates plots
+* `process_DYCOMS.m` reads DYCOMS different setup outputs and creates plots
 
-* read_all_NKX_output.m (uses read_streamer_output.m) Goes through all files and retrieves LW_down at cloud top, which is used to calculate the sky brightness temperature. It also calculates the tropospheric values of q_t (total water mixing ratio), so we can establish the relationship T_sky(tropospheric q_t).
+* `read_all_NKX_output.m` (uses `read_streamer_output.m`) Goes through all files and retrieves LW_down at cloud top, which is used to calculate the sky brightness temperature. It also calculates the tropospheric values of q_t (total water mixing ratio), so we can establish the relationship T_sky(tropospheric q_t).
 
 ___
 
-This project was also the final project for SIOC208, class by Joel Norris at SIO, UCSD.
+This project was also the final project for SIOC208 Fall 2017, class taught by Joel Norris at SIO, UCSD.
+
 Mónica Zamora Z., 2017. SRAF at UCSD solar.ucsd.edu
