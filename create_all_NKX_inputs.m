@@ -13,10 +13,7 @@ for yy=2014:2017
         end
            
         for dd=1:dmax
-            try
             make_streamer_input(datetime(yy,mm,dd,12,0,0));
-            catch
-            end
         end
     end
 end

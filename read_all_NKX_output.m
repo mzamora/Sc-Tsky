@@ -13,6 +13,7 @@ for yy=2014:2017
         for dd=1:dmax
             %% Whole profile
             date_i=datetime(yy,mm,dd,12,0,0)
+            %%
             dates(ind)=date_i;
             qv_up3km(ind)=nan; qv_upper(ind)=nan;
             z_inv(ind)=nan; LWi_allz(ind)=nan; LWi_upperz(ind)=nan;
@@ -36,6 +37,8 @@ for yy=2014:2017
             qv_up3km(ind)=trapz(z(nit:n_3km),w(nit:n_3km))/(z(n_3km)-z(nit));
             qv_upper(ind)=trapz(z(nit:end),w(nit:end))/(z(end)-z(nit));
             catch
+                qv_up3km(ind)=nan;
+                qv_upper(ind)=nan;
             end
             
             %% All profile
@@ -43,41 +46,47 @@ for yy=2014:2017
             try
                 [Z,P,T,WV,O3,RH,Aer,LW_dn,LW_up]=read_streamer_output(filename);
                 z_inv(ind)=zi*1e3;
-                LWi_allz(ind)=interp1(Z,LW_dn,zi);
+                LWi_allz(ind)=interp1(Z,LW_dn,zi,'nearest'); %,'extrap');
             catch
+                try
+                    [~,ni2]=min(abs(Z-zi));
+                    LWi_allz(ind)=LW_dn(ni2);
+                catch
+                    LWi_allz(ind)=nan;
+                end
             end
             %% Profile above inversion
             filename=['NKX2/sounding_' datestr(date_i,'yyyymmdd') '.out'];
             try
                 [z2,p2,T2,wv2,O32,RH2,Aer2,LW_dn2,LW_up2]=read_streamer_output(filename);
-                if exist('zi')
-                    LWi_upperz(ind)=interp1(z2,LW_dn2,zi,'linear','extrap');
-                else
-                    LWi_upperz(ind)=LW_dn2(end);
-                end
+                LWi_upperz(ind)=LW_dn2(end);
             catch
+                LWi_upperz(ind)=nan;
             end
 
             %% Plots (just for checking)
 %             try
-%             subplot(131); plot(LW_dn,Z); xlabel('LW ↓'); ylim([0 3]); ylabel('z'); hold on
-%             subplot(132); plot(LW_up,Z); xlabel('LW ↑'); ylim([0 3]); hold on
+%             subplot(131); plot(LW_dn,Z,'.-'); xlabel('LW ↓'); ylim([0 3]); ylabel('z'); hold on
+%             text(150,zi*0.8,['LW_i all=',num2str(LWi_allz(ind))])
+%             subplot(132); plot(LW_up,Z,'.-'); xlabel('LW ↑'); ylim([0 3]); hold on
 %             title(datestr(date_i))
-%             subplot(133); plot(LW_up-LW_dn,Z); xlabel('Net LW'); ylim([0 3]); hold on
+%             subplot(133); plot(LW_up-LW_dn,Z,'.-'); xlabel('Net LW'); ylim([0 3]); hold on
 %             legend('All z')
 %             catch
 %             end
 %             try
-%             subplot(131); plot(LW_dn2,z2); xlabel('LW ↓'); ylim([0 3]); ylabel('z')
-%             subplot(132); plot(LW_up2,z2); xlabel('LW ↑'); ylim([0 3])
+%             subplot(131); plot(LW_dn2,z2,'.-'); xlabel('LW ↓'); ylim([0 3]); ylabel('z')
+%             text(150,zi*1.2,['LW_i upper=',num2str(LWi_upperz(ind))])
+%             subplot(132); plot(LW_up2,z2,'.-'); xlabel('LW ↑'); ylim([0 3])
 %             title(datestr(date_i))
-%             subplot(133); plot(LW_up2-LW_dn2,z2); xlabel('Net LW'); ylim([0 3])
+%             subplot(133); plot(LW_up2-LW_dn2,z2,'.-'); xlabel('Net LW'); ylim([0 3])
 %             legend('z>z_i')
 %             catch
 %             end
+%             
 %             pause
 %             clf
-
+            clear LW_dn LW_up LW_dn2 LW_up2 Z z2 zi
             ind=ind+1;
         end
     end

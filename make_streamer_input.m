@@ -11,6 +11,9 @@ pathName=['../Sc-utils/Soundings/raw/72293_',datestr(date_i,'yyyy_mm_'),'0100_',
 ListofVar={'PRES';'HGHT';'TEMP';'DWPT';'RELH';'MIXR';'WDIR';'WSPD';'THTA';'THTE';'THTV'};
 [p z tp td RH w winddir windspeed theta theta_e theta_v]=Get_sounding_Var(date_i,date_i+0.5,pathName,ListofVar);
 p=double(p); z=double(z);
+if isempty(z)
+    return 
+end
 f=w>50; p(f)=[]; z(f)=[]; tp(f)=[]; RH(f)=[]; w(f)=[];
 [~,~,hght_top,zi,eta_top,ni]=TMP_Inversion_Strength_Cal(tp,z/1000,z(1)); %Xiaohui's code for inversion height
 [~,~,hght_top2,~,eta_top2,~]=TMP_Inversion_Strength_Cal(-w,z/1000,z(1)); %Xiaohui's code for inversion height
@@ -32,6 +35,7 @@ if hght_top2<hght_top
 end
 
 %% Find cloud base from sounding
+nocloud=0; %we assume initially that there'll be a cloud
 try
     cloudpoints=find(RH>95);
     n_clouds=1;
@@ -46,52 +50,67 @@ try
     end    
 catch
     fprintf('No cloud layer \n')
-    %return
+    nocloud=1;
+    zb=zi;
 end
 
 h=zi*1e3-zb; %cloud thickness in m
+if h==0 
+    fprintf('No cloud layer \n')
+    nocloud=1;
+end
 Tcld=tp(ni); %temp at top of the cloud
 PW=-trapz(p,w)/1000/9.81*10; %precipitable water in cm
 
-%% Estimate tau,LWP,LWC from well mixed assumption
-z2=z(1):1:zi*1e3;
-theta_l=trapz(z(1:ni),theta(1:ni))/(z(ni)-z2(1))*ones(size(z2));
-q_t=trapz(z(1:ni),w(1:ni))/(z2(end)-z2(1))*ones(size(z2))*1e-3; %in kg/kg
-p2=interp1(z(1:ni),p(1:ni),z2)*100; %in Pa
-[T,q_l,q_sat]=get_T_ql_qs(z2,theta_l,q_t,p2);
-
-zb2=z2(find(q_l>0,1)); %wll mixed cloud base
-rho=p2./287.3./T;
-LWP=trapz(z2,rho.*q_l)*1000; %LWP in g/m2
-LWC=q_l(end)*rho(end)*1e3; %LWC at top
-tau=3*LWP/2/1e6/1e-5;
-
-if LWP==0
-    fprintf('No cloud in well-mixed approximation \n')
-    return
-end
-
-%% Re-do vertical profile: clean as much as possible
+%% Re-do vertical profile: clean as much as possible, but don't delete zi
 i=1; notdone=1;
 while notdone
     if (i+2)>=length(z)
         notdone=0;
         continue
     end
-    RHi1=interp1([z(i),z(i+2)],[RH(i),RH(i+2)],z(i+1));
-    if abs(RH(i+1)-RHi1)<0.5
-        RH(i+1)=[]; p(i+1)=[]; z(i+1)=[]; tp(i+1)=[]; 
+    tpi1=interp1([z(i),z(i+2)],[tp(i),tp(i+2)],z(i+1));
+    if abs(tp(i+1)-tpi1)<0.5 && (z(i+1)~=zi*1e3)
+        RH(i+1)=[]; p(i+1)=[]; z(i+1)=[]; tp(i+1)=[]; w(i+1)=[];
     end
     i=i+1;
 end
+    
+%% Estimate tau,LWP,LWC from well mixed assumption
+ni=find(z==round(zi*1e3,1),1); %update zi
+if ni>1
+    %%
+    z2=z(1):1:zi*1e3;
+    theta_l=trapz(z(1:ni),theta(1:ni))/(z(ni)-z2(1))*ones(size(z2));
+    q_t=trapz(z(1:ni),w(1:ni))/(z2(end)-z2(1))*ones(size(z2))*1e-3; %in kg/kg
+    p2=interp1(z(1:ni),p(1:ni),z2,'linear','extrap')*100; %in Pa
+    [T,q_l,q_sat]=get_T_ql_qs(z2,theta_l,q_t,p2);
 
-%% Put 15 extra points in the cloud and 15 above it
-n=length(z);
-zCLD=linspace(zb,zi*1e3+h,30);
-znew=[z(z<zb);zCLD';z(z>zi*1e3+h)];
-RHnew=interp1(z,RH,znew);
-tpnew=interp1(z,tp,znew);
-pnew=interp1(z,p,znew);
+    zb2=z2(find(q_l>0,1)); %well mixed cloud base
+    rho=p2./287.3./T;
+    LWP=trapz(z2,rho.*q_l)*1000; %LWP in g/m2
+    LWC=q_l(end)*rho(end)*1e3; %LWC at top
+    tau=3*LWP/2/1e6/1e-5;
+else
+    nocloud=1; LWP=nan;
+end
+    %%
+if LWP==0
+    fprintf('No cloud in well-mixed approximation \n')
+    return
+end
+
+if nocloud
+    znew=z; RHnew=RH; tpnew=tp; pnew=p;
+else
+    %% Put 15 extra points in the cloud and 15 above it
+    n=length(z);
+    zCLD=linspace(zb,zi*1e3+h,30);
+    znew=[z(z<zb);zCLD';z(z>zi*1e3+h)];
+    RHnew=interp1(z,RH,znew);
+    tpnew=interp1(z,tp,znew);
+    pnew=interp1(z,p,znew);
+end
 
 %% Don't exceed 85 points for extending to 100km
 if length(znew)>85
@@ -134,7 +153,11 @@ fprintf(fileID,' \n'); % Nothing for FLUXES TRUE
 fprintf(fileID,'1 129 \n'); %Bands
 fprintf(fileID,' 0.05 1 1 1 \n'); %Albedo 0.05 w/1 sfc: water
 fprintf(fileID,[num2str(tpnew(1)),' 1.0 \n']); %Tsrf and emissivity
-fprintf(fileID,['1 1 0.9 ',num2str(Tcld),' ',num2str(zi),' ',num2str(h/1e3),' ',num2str(tau),' 1 0 10 ',num2str(LWC),' 999 999 999\n']); %Cloud info w/only 1 cloud properties
+if nocloud
+    fprintf(fileID,'0 \n');
+else
+    fprintf(fileID,['1 1 0.9 ',num2str(Tcld),' ',num2str(zi),' ',num2str(h/1e3),' ',num2str(tau),' 1 0 10 ',num2str(LWC),' 999 999 999\n']); %Cloud info w/only 1 cloud properties
+end
 fprintf(fileID,' \n'); %No cloud overlap
 fprintf(fileID,['1 1 1 1 0 0 ',num2str(length(znew)),' 1.0 1.0 1.0 1.0 1.0 1.0 \n']); % We read z,p,T,RH profiles
 fprintf(fileID,'%.3f %.1f %.1f %.0f \n',[znew(end:-1:1)/1000,pnew(end:-1:1),tpnew(end:-1:1),RHnew(end:-1:1)]'); %put sounding profiles

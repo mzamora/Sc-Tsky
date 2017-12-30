@@ -12,9 +12,12 @@ pathName=['../Sc-utils/Soundings/raw/72293_',datestr(date_i,'yyyy_mm_'),'0100_',
 ListofVar={'PRES';'HGHT';'TEMP';'DWPT';'RELH';'MIXR';'WDIR';'WSPD';'THTA';'THTE';'THTV'};
 [p z tp td RH w winddir windspeed theta theta_e theta_v]=Get_sounding_Var(date_i,date_i+0.5,pathName,ListofVar);
 p=double(p); z=double(z);
+if isempty(z)
+    fprintf('No data \n')
+    return
+end
 f=w>50; p(f)=[]; z(f)=[]; tp(f)=[]; RH(f)=[]; w(f)=[];
 [DT_max,numofInv,hght_top,zi,eta_top,ni]=TMP_Inversion_Strength_Cal(tp,z/1000,z(1)); %Xiaohui's code for inversion height
-
 if isempty(z)
     fprintf('No data \n')
     return
@@ -44,8 +47,8 @@ while notdone
         notdone=0;
         continue
     end
-    RHi1=interp1([z(i),z(i+2)],[RH(i),RH(i+2)],z(i+1)); %interpolation of neighbors
-    if abs(RH(i+1)-RHi1)<0.5 %if the value in between and the interpolation are close
+    tpi1=interp1([z(i),z(i+2)],[tp(i),tp(i+2)],z(i+1)); %interpolation of neighbors
+    if abs(tp(i+1)-tpi1)<0.5 %if the value in between and the interpolation are close
         RH(i+1)=[]; p(i+1)=[]; z(i+1)=[]; tp(i+1)=[]; %we take that point away
     end
     i=i+1;
@@ -53,7 +56,6 @@ end
 
 %% Put 15 extra points above inversion (now surface) for better resolution
 zup=linspace(z(1),zi*1.5e3,15)';
-
 znew=[zup;z(z>1.5e3*zi)]; RHnew=interp1(z,RH,znew);
 tpnew=interp1(z,tp,znew); pnew=interp1(z,p,znew);
 
